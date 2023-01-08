@@ -1,0 +1,220 @@
+/*
+ * Copyright (c) The Libre Solar Project Contributors
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <st/g4/stm32g431Xb.dtsi>
+#include <st/g4/stm32g431c(6-8-b)tx-pinctrl.dtsi>
+
+/ {
+	model = "Libre Solar MPPT 4820 HC";
+	compatible = "st,stm32g431";
+
+	pcb {
+		compatible = "charge-controller";
+
+		type = "MPPT 4820 HC";
+
+		hs-voltage-max = <90>;
+		ls-voltage-max = <32>;
+		dcdc-current-max = <20>;
+	};
+
+	chosen {
+		zephyr,console = &usart1;
+		zephyr,shell-uart = &usart1;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+	};
+
+	/* temporary solution only using green color LED */
+	leds {
+		compatible = "charlieplexing-leds";
+		gpios = <&gpioa 6 GPIO_ACTIVE_LOW>,	/* chg red */
+			<&gpioc 14 GPIO_ACTIVE_LOW>,	/* chg green */
+			<&gpiob 9 GPIO_ACTIVE_LOW>,	/* dis red */
+			<&gpioc 15 GPIO_ACTIVE_LOW>;	/* dis green */
+
+		pwr {
+			states = <0 1 0 0>;
+		};
+
+		load {
+			states = <0 0 0 1>;
+		};
+	};
+
+	outputs {
+		compatible = "outputs";
+
+		load {
+			label = "Load output";
+			gpios = <&gpiob 2 GPIO_ACTIVE_LOW>;
+			current-max = <20>;
+			kconfig-flag;	/* make node visible in Kconfig */
+		};
+
+		charge_pump {
+			label = "Charge pump for HS MOSFET drivers";
+			pwms = <&pwm8 2 200000 PWM_POLARITY_NORMAL>; /* 200 us period = 5 kHz */
+		};
+
+		can_en {
+			label = "CAN disable / standby";
+			gpios = <&gpiob 11 GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	adc-inputs {
+		compatible = "adc-inputs";
+
+		v-low {
+			io-channels = <&adc1 12>;
+			multiplier = <105600>;
+			divider = <5600>;
+		};
+
+		v-high {
+			io-channels = <&adc1 15>;
+			multiplier = <102200>;
+			divider = <2200>;
+		};
+
+		temp-fets {
+			io-channels = <&adc1 11>;
+			multiplier = <10000>;	// 10k NTC series resistor
+			divider = <1>;
+		};
+
+		vref-mcu {
+			io-channels = <&adc1 18>;
+			multiplier = <1>;
+			divider = <1>;
+		};
+
+		temp-mcu {
+			io-channels = <&adc1 16>;
+			multiplier = <1>;
+			divider = <1>;
+		};
+
+		i-dcdc {
+			io-channels = <&adc2 1>;
+			// amp gain: 50, resistor: 2 mOhm
+			multiplier = <1000>;	// 1000
+			divider = <100>;	// 2*50
+		};
+
+		i-load {
+			io-channels = <&adc2 2>;
+			// amp gain: 25, resistor: 2 mOhm
+			multiplier = <1000>;	// 1000
+			divider = <50>;	// 2*25
+		};
+	};
+
+	aliases {
+		uart-dbg = &usart1;
+		uart-uext = &usart2;
+		spi-uext = &spi1;
+		i2c-uext = &i2c1;
+	};
+};
+
+&clk_hsi {
+	status = "okay";
+};
+
+&pll {
+	div-m = <4>;
+	mul-n = <75>;
+	div-p = <7>;
+	div-q = <2>;
+	div-r = <2>;
+	clocks = <&clk_hsi>;
+	status = "okay";
+};
+
+&rcc {
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(150)>;
+	ahb-prescaler = <1>;
+	apb1-prescaler = <1>;
+	apb2-prescaler = <1>;
+};
+
+&usart1 {
+	pinctrl-0 = <&usart1_tx_pa9 &usart1_rx_pa10>;
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&usart1_rx_pa10 {
+	bias-pull-up;	// avoid junk characters if pin is left floating
+};
+
+&usart2 {
+	pinctrl-0 = <&usart2_tx_pa2 &usart2_rx_pa3>;
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&usart2_rx_pa3 {
+	bias-pull-up;	// avoid junk characters if pin is left floating
+};
+
+&i2c1 {
+	pinctrl-0 = <&i2c1_scl_pa15 &i2c1_sda_pb7>;
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+	status = "okay";
+};
+
+&spi1 {
+	pinctrl-0 = <&spi1_sck_pb3 &spi1_miso_pb4 &spi1_mosi_pb5>;
+	cs-gpios = <&gpiob 6 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+&spi2 {
+	pinctrl-0 = <&spi2_sck_pb13 &spi2_miso_pb14 &spi2_mosi_pb15>;
+	cs-gpios = <&gpioa 5 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+&iwdg {
+	status = "okay";
+};
+
+&timers1 {
+	status = "okay";
+
+	halfbridge {
+		compatible = "half-bridge";
+		pinctrl-0 = <&tim1_ch1_pa8 &tim1_ch1n_pc13>;
+		frequency = <70000>;
+		deadtime = <300>;
+	};
+};
+
+/* TIM8 (CH2) used for charge pump */
+&timers8 {
+	status = "okay";
+	pwm8: pwm {
+		status = "okay";
+		st,prescaler = <149>;	/* reduce counter clock frequency to 1 MHz */
+		pinctrl-0 = <&tim8_ch2_pb8>;
+	};
+};
+
+&can1 {
+	pinctrl-0 = <&fdcan1_rx_pa11 &fdcan1_tx_pa12>;
+	bus-speed = <500000>;
+	bus-speed-data = <500000>;
+	sjw = <1>;
+	sjw-data = <1>;
+	sample-point = <875>;
+	sample-point-data = <875>;
+	status = "okay";
+};

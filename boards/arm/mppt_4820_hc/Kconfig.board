@@ -1,0 +1,6 @@
+# Copyright (c) The Libre Solar Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_MPPT_4820_HC
+	bool "Libre Solar MPPT 4820 HC"
+	depends on SOC_STM32G431XX
