@@ -9,9 +9,9 @@
 #include <math.h>
 #include <stdio.h>
 
-#include <device.h>
-#include <drivers/gpio.h>
-#include <zephyr.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/kernel.h>
 
 #include "oled_ssd1306.h"
 
@@ -39,7 +39,7 @@ const unsigned char bmp_disconnected[] = {
     0x08, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-OledSSD1306 oled(DT_LABEL(DT_ALIAS(i2c_uext)));
+OledSSD1306 oled(DEVICE_DT_GET(DT_ALIAS(i2c_uext)));
 
 void oled_update()
 {

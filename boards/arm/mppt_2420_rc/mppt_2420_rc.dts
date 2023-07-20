@@ -44,12 +44,10 @@
 		compatible = "outputs";
 
 		can_en {
-			label = "CAN disable / standby";
 			gpios = <&gpiob 14 GPIO_ACTIVE_LOW>;
 		};
 
 		hv-out {
-			label = "HV output sense and enable switch";
 			gpios = <&gpiob 12 GPIO_ACTIVE_LOW>;
 		};
 	};
@@ -139,6 +137,7 @@
 
 &usart1 {
 	pinctrl-0 = <&usart1_tx_pa9 &usart1_rx_pa10>;
+	pinctrl-names = "default";
 	current-speed = <115200>;
 	status = "okay";
 };
@@ -149,6 +148,7 @@
 
 &usart2 {
 	pinctrl-0 = <&usart2_tx_pa2 &usart2_rx_pa3>;
+	pinctrl-names = "default";
 	current-speed = <115200>;
 	status = "okay";
 };
@@ -159,6 +159,7 @@
 
 &spi1 {
 	pinctrl-0 = <&spi1_sck_pb3 &spi1_miso_pb4 &spi1_mosi_pb5>;
+	pinctrl-names = "default";
 	cs-gpios = <&gpiob 6 GPIO_ACTIVE_LOW>;
 	status = "okay";
 };
@@ -166,9 +167,10 @@
 &timers1 {
 	status = "okay";
 
-	halfbridge {
+	halfbridge: halfbridge {
 		compatible = "half-bridge";
 		pinctrl-0 = <&tim1_ch1_pa8 &tim1_ch1n_pb13>;
+		pinctrl-names = "default";
 		frequency = <70000>;
 		deadtime = <300>;
 	};
@@ -186,7 +188,6 @@
 
 		/* Set 4Kb of storage at the end of the 128Kb of flash */
 		storage_partition: partition@1f000 {
-			label = "storage";
 			reg = <0x0001f000 0x00001000>;
 		};
 	};
@@ -200,12 +201,13 @@
 	/* shared between UEXT and EEPROM */
 	status = "okay";
 	pinctrl-0 = <&i2c1_scl_pa15 &i2c1_sda_pb7>;
+	pinctrl-names = "default";
 	clock-frequency = <I2C_BITRATE_STANDARD>;
-	eeprom@50 {
+
+	eeprom: eeprom@50 {
 		// Microchip 24AA32A
 		compatible = "atmel,at24";
 		reg = <0x50>;
-		label = "EEPROM_0";
 		size = <32768>;
 		pagesize = <32>;
 		address-width = <16>;
@@ -219,6 +221,7 @@
 
 &can1 {
 	pinctrl-0 = <&fdcan1_rx_pa11 &fdcan1_tx_pa12>;
+	pinctrl-names = "default";
 	bus-speed = <500000>;
 	bus-speed-data = <500000>;
 	sjw = <1>;

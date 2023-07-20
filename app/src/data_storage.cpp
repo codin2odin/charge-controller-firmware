@@ -6,7 +6,7 @@
 
 #include "data_storage.h"
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 
 #include "data_objects.h"
 #include "helper.h"
@@ -17,8 +17,8 @@
 
 #ifdef CONFIG_SOC_FAMILY_STM32
 
-#include <device.h>
 #include <stm32_ll_bus.h>
+#include <zephyr/device.h>
 
 LOG_MODULE_REGISTER(nvs, CONFIG_DATA_STORAGE_LOG_LEVEL);
 
@@ -57,7 +57,7 @@ uint32_t _calc_crc(const uint8_t *buf, size_t len)
 
 #ifdef CONFIG_EEPROM
 
-#include <drivers/eeprom.h>
+#include <zephyr/drivers/eeprom.h>
 
 /*
  * EEPROM header bytes:
@@ -69,11 +69,16 @@ uint32_t _calc_crc(const uint8_t *buf, size_t len)
  */
 #define EEPROM_HEADER_SIZE 8
 
+static const struct device *eeprom_dev = DEVICE_DT_GET(DT_NODELABEL(eeprom));
+
 void data_storage_read()
 {
     int err;
 
-    const struct device *eeprom_dev = device_get_binding("EEPROM_0");
+    if (!device_is_ready(eeprom_dev)) {
+        LOG_ERR("EEPROM device not ready");
+        return;
+    }
 
     uint8_t buf_header[EEPROM_HEADER_SIZE] = {};
     err = eeprom_read(eeprom_dev, 0, buf_header, EEPROM_HEADER_SIZE);
@@ -116,7 +121,10 @@ void data_storage_write()
 {
     int err;
 
-    const struct device *eeprom_dev = device_get_binding("EEPROM_0");
+    if (!device_is_ready(eeprom_dev)) {
+        LOG_ERR("EEPROM device not ready");
+        return;
+    }
 
     k_mutex_lock(&data_buf_lock, K_FOREVER);
 
@@ -150,9 +158,9 @@ void data_storage_write()
 
 #elif defined(CONFIG_NVS)
 
-#include <drivers/flash.h>
-#include <fs/nvs.h>
-#include <storage/flash_map.h>
+#include <zephyr/drivers/flash.h>
+#include <zephyr/fs/nvs.h>
+#include <zephyr/storage/flash_map.h>
 
 /*
  * NVS header bytes:
@@ -162,41 +170,49 @@ void data_storage_write()
  */
 #define NVS_HEADER_SIZE 2
 
-#define FLASH_PARTITION_NODE DT_NODE_BY_FIXED_PARTITION_LABEL(storage)
-#define FLASH_DEVICE_NODE    DT_MTD_FROM_FIXED_PARTITION(FLASH_PARTITION_NODE)
+#define NVS_PARTITION storage_partition
 
 #define THINGSET_DATA_ID 1
-
-static const struct device *flash_dev = DEVICE_DT_GET(FLASH_DEVICE_NODE);
 
 static struct nvs_fs fs;
 static bool nvs_initialized = false;
 
-static void data_storage_init()
+static int data_storage_init()
 {
     int err;
     struct flash_pages_info page_info;
 
-    fs.offset = FLASH_AREA_OFFSET(storage);
-    err = flash_get_page_info_by_offs(flash_dev, fs.offset, &page_info);
+    fs.flash_device = FIXED_PARTITION_DEVICE(NVS_PARTITION);
+    if (!device_is_ready(fs.flash_device)) {
+        LOG_ERR("Flash device not ready");
+        return -ENODEV;
+    }
+    fs.offset = FIXED_PARTITION_OFFSET(NVS_PARTITION);
+    err = flash_get_page_info_by_offs(fs.flash_device, fs.offset, &page_info);
     if (err) {
         LOG_ERR("Unable to get flash page info");
+        return err;
     }
     fs.sector_size = page_info.size;
-    fs.sector_count = FLASH_AREA_SIZE(storage) / page_info.size;
+    fs.sector_count = FIXED_PARTITION_SIZE(NVS_PARTITION) / page_info.size;
 
-    err = nvs_init(&fs, DT_LABEL(FLASH_DEVICE_NODE));
+    err = nvs_mount(&fs);
     if (err) {
-        LOG_ERR("NVS init failed");
+        LOG_ERR("NVS mount failed: %d", err);
+        return err;
     }
 
     nvs_initialized = true;
+    return 0;
 }
 
 void data_storage_read()
 {
     if (!nvs_initialized) {
-        data_storage_init();
+        int err = data_storage_init();
+        if (err) {
+            return;
+        }
     }
 
     int num_bytes = nvs_read(&fs, THINGSET_DATA_ID, &buf, sizeof(buf));
@@ -225,7 +241,10 @@ void data_storage_read()
 void data_storage_write()
 {
     if (!nvs_initialized) {
-        data_storage_init();
+        int err = data_storage_init();
+        if (err) {
+            return;
+        }
     }
 
     k_mutex_lock(&data_buf_lock, K_FOREVER);
@@ -240,7 +259,10 @@ void data_storage_write()
     else {
         int ret = nvs_write(&fs, THINGSET_DATA_ID, &buf, len + NVS_HEADER_SIZE);
         if (ret == len + NVS_HEADER_SIZE) {
-            LOG_INF("NVS data successfully stored");
+            LOG_DBG("NVS data successfully stored");
+        }
+        else if (ret == 0) {
+            LOG_DBG("NVS data unchanged");
         }
         else {
             LOG_ERR("NVS write error %d", ret);
@@ -252,8 +274,10 @@ void data_storage_write()
 
 #else
 
-void data_storage_write() {}
-void data_storage_read() {}
+void data_storage_write()
+{}
+void data_storage_read()
+{}
 
 #endif
 
