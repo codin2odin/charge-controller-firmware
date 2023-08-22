@@ -18,7 +18,7 @@
 		type = "MPPT 4820 HC";
 
 		hs-voltage-max = <90>;
-		ls-voltage-max = <32>;
+		ls-voltage-max = <55>;
 		dcdc-current-max = <20>;
 	};
 

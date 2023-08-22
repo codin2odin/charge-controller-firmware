@@ -59,7 +59,7 @@ int main(void)
     // Data Acquisition (DAQ) setup
     daq_setup();
 
-    charger.detect_num_batteries(&bat_conf); // check if we have 24V instead of 12V system
+    charger.detect_num_batteries(&bat_conf, CONFIG_BAT_TYPE); // check if we have 12v/24v/48v system
     charger.init_terminal(&bat_conf);
 
 #if BOARD_HAS_LOAD_OUTPUT

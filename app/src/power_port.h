@@ -42,7 +42,7 @@ public:
     /**
      * Multiplier for series connection of batteries
      *
-     * Used for automatic 12V/24V battery detection at start-up (can be 1 or 2 only)
+     * Used for automatic 12V/24V/48V battery detection at start-up
      *
      * This factor must be applied to all voltage setpoints
      */

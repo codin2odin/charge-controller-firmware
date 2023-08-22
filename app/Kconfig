@@ -135,21 +135,20 @@ config BAT_TYPE
     default 5 if BAT_TYPE_NMC
     default 6 if BAT_TYPE_NMC_HV
 
+# do not change unless you know what you are doing!
 config BAT_NUM_CELLS
     int "Number of cells for single battery"
     default 6 if BAT_TYPE_FLOODED || BAT_TYPE_GEL || BAT_TYPE_AGM
-    default 4 if BAT_TYPE_LFP
-    default 3 if BAT_TYPE_NMC || BAT_TYPE_NMC_HV
+    default 1 if BAT_TYPE_LFP
+    default 1 if BAT_TYPE_NMC || BAT_TYPE_NMC_HV
     range 3 16
     help
       Typical choices:
       - 6 for 12V lead-acid battery
-      - 4 for 12V LiFePO4 battery
-      - 3 for 12V NMC Li-ion battery
 
       Remarks:
-      - If you choose settings for 12V system, 24V systems
-        (2 batteries in series) are recognized automatically
+      - If you choose settings for 12V, 24V or 48V system
+        (cells in series LFP-4,8,15 NMC-3,6,13 Lead-1,2,4) are recognized automatically
       - Make sure the voltage of the used charge controller
         is not exceeded.
 

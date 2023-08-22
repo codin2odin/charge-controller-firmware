@@ -349,16 +349,68 @@ bool battery_conf_changed(BatConf *a, BatConf *b)
             || a->wire_resistance != b->wire_resistance);
 }
 
-void Charger::detect_num_batteries(BatConf *bat) const
+void Charger::detect_num_batteries(BatConf *bat, int type) const
 {
-    if (port->bus->voltage > bat->absolute_min_voltage * 2
-        && port->bus->voltage < bat->absolute_max_voltage * 2)
-    {
-        port->bus->series_multiplier = 2;
-        printf("Detected two batteries (total %.2f V max)\n", bat->topping_voltage * 2);
-    }
-    else {
-        printf("Detected single battery (%.2f V max)\n", bat->topping_voltage);
+    switch(type) {
+        case BAT_TYPE_FLOODED:
+        case BAT_TYPE_AGM:
+        case BAT_TYPE_GEL:
+            if (port->bus->voltage > bat->absolute_min_voltage * 4
+                && port->bus->voltage < bat->absolute_max_voltage * 4)
+            {
+                port->bus->series_multiplier = 4;
+                printf("Detected four batteries (total %.2f V max)\n", bat->topping_voltage * 2);
+            }
+            else if (port->bus->voltage > bat->absolute_min_voltage * 2
+                && port->bus->voltage < bat->absolute_max_voltage * 2)
+            {
+                port->bus->series_multiplier = 2;
+                printf("Detected two batteries (total %.2f V max)\n", bat->topping_voltage * 2);
+            }
+            else {
+                printf("Detected single battery (%.2f V max)\n", bat->topping_voltage);
+            }
+            break;
+        
+        case BAT_TYPE_LFP:
+            if (port->bus->voltage > bat->absolute_min_voltage * 15
+                && port->bus->voltage < bat->absolute_max_voltage * 15)
+            {
+                port->bus->series_multiplier = 15;
+                printf("Detected 15 cells (total %.2f V max)\n", bat->topping_voltage * 15);
+            }
+            else if (port->bus->voltage > bat->absolute_min_voltage * 8
+                && port->bus->voltage < bat->absolute_max_voltage * 8)
+            {
+                port->bus->series_multiplier = 8;
+                printf("Detected 8 cells (total %.2f V max)\n", bat->topping_voltage * 8);
+            }
+            else {
+                port->bus->series_multiplier = 4;
+                printf("Detected 4 cells (%.2f V max)\n", bat->topping_voltage * 4);
+            }
+            break;
+
+        case BAT_TYPE_NMC:
+        case BAT_TYPE_NMC_HV:
+            if (port->bus->voltage > bat->absolute_min_voltage * 13
+                && port->bus->voltage < bat->absolute_max_voltage * 13)
+            {
+                port->bus->series_multiplier = 13;
+                printf("Detected 13 cells (total %.2f V max)\n", bat->topping_voltage * 13);
+            }
+            else if (port->bus->voltage > bat->absolute_min_voltage * 6
+                && port->bus->voltage < bat->absolute_max_voltage * 6)
+            {
+                port->bus->series_multiplier = 6;
+                printf("Detected 6 cells (total %.2f V max)\n", bat->topping_voltage * 6);
+            }
+            else {
+                port->bus->series_multiplier = 3;
+                printf("Detected 3 cells (%.2f V max)\n", bat->topping_voltage * 3);
+            }
+
+            break;
     }
 }
 
