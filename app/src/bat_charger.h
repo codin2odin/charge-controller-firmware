@@ -440,7 +440,7 @@ public:
     /**
      * Detect if two batteries are connected in series (12V/24V auto-detection)
      */
-    void detect_num_batteries(BatConf *bat) const;
+    void detect_num_batteries(BatConf *bat, int type) const;
 
     /**
      * Discharging control update (for load output), should be called once per second
